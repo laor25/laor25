@@ -1,0 +1,12 @@
+{
+  "title": "Lenguajes",
+  "_comment": "Autoevaluación de 0 a 100. Edita estos valores y el workflow vuelve a dibujar el radar.",
+  "axes": [
+    { "label": "C#",         "value": 82 },
+    { "label": "SQL",        "value": 75 },
+    { "label": "JavaScript", "value": 72 },
+    { "label": "TypeScript", "value": 68 },
+    { "label": "Python",     "value": 65 },
+    { "label": "HTML / CSS", "value": 80 }
+  ]
+}

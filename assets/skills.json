@@ -1,0 +1,13 @@
+{
+  "title": "Radar de habilidades",
+  "_comment": "Autoevaluación de 0 a 100. Edita estos valores y el workflow vuelve a dibujar el radar.",
+  "axes": [
+    { "label": "C# / .NET",          "value": 80 },
+    { "label": "APIs REST",          "value": 75 },
+    { "label": "Bases de datos",     "value": 75 },
+    { "label": "Angular / React",    "value": 70 },
+    { "label": "Python / Django",    "value": 65 },
+    { "label": ".NET MAUI (móvil)",  "value": 62 },
+    { "label": "Redes y sistemas",   "value": 60 }
+  ]
+}
