@@ -9,7 +9,6 @@ on:
     paths:
       - "assets/skills.json"
       - "assets/langmix.json"
-      - "assets/projects.json"
       - "scripts/radar.py"
       - "scripts/cards.py"
       - ".github/workflows/cards.yml"
@@ -35,11 +34,11 @@ jobs:
       - name: Radar de lenguajes
         run: python scripts/radar.py --data assets/langmix.json -o assets/radar-langs --values
 
-      # Tarjetas propias de estadísticas, lenguajes y proyectos
+      # Tarjetas propias de estadísticas y lenguajes
       - name: Tarjetas
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/cards.py --user "${{ github.repository_owner }}" --projects assets/projects.json --out assets
+        run: python scripts/cards.py --user "${{ github.repository_owner }}" --out assets
 
       - name: Guardar cambios
         run: |

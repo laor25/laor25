@@ -3,10 +3,9 @@
 
   - card-stats-{dark,light}.svg     estrellas, repos, seguidores, contribuciones, rachas
   - card-langs-{dark,light}.svg     lenguajes más usados en repos públicos
-  - card-<repo>-{dark,light}.svg    una tarjeta por proyecto de assets/projects.json
 
 Uso:
-    GITHUB_TOKEN=... python scripts/cards.py --user laor25 --projects assets/projects.json --out assets
+    GITHUB_TOKEN=... python scripts/cards.py --user laor25 --out assets
 
 Solo considera repositorios PÚBLICOS. Solo usa la biblioteca estándar.
 """
@@ -166,47 +165,9 @@ def langs_card(totals: dict[str, int], theme: str, limit: int = 6) -> str:
     return "".join(out)
 
 
-def wrap(text: str, width: int) -> list[str]:
-    lines, line = [], ""
-    for word in text.split():
-        if len(line) + len(word) + 1 > width and line:
-            lines.append(line)
-            line = word
-        else:
-            line = f"{line} {word}".strip()
-    if line:
-        lines.append(line)
-    return lines[:2]
-
-
-def project_card(p: dict, repo: dict | None, theme: str) -> str:
-    t = THEMES[theme]
-    w, h = 400, 130
-    name = p["repo"]
-    out = svg_open(w, h, name, t)
-    out.append(f'<text x="20" y="34" font-size="15" font-weight="700" fill="{t["title"]}">{esc(p.get("title", name))}</text>')
-    for i, line in enumerate(wrap(p.get("description") or (repo or {}).get("description") or "", 54)):
-        out.append(f'<text x="20" y="{58 + i * 18}" font-size="12" fill="{t["muted"]}">{esc(line)}</text>')
-    lang = p.get("language") or (repo or {}).get("language") or ""
-    stars = (repo or {}).get("stargazers_count", 0)
-    x = 20
-    if lang:
-        out.append(f'<circle cx="{x + 5}" cy="{h - 24}" r="5" fill="{LANG_COLORS.get(lang, "#8B949E")}"/>')
-        out.append(f'<text x="{x + 15}" y="{h - 20}" font-size="12" fill="{t["text"]}">{esc(lang)}</text>')
-        x += 26 + len(lang) * 7.4
-    tags = " · ".join(p.get("tags", []))
-    if tags:
-        out.append(f'<text x="{x}" y="{h - 20}" font-size="11.5" fill="{t["muted"]}">{esc(tags)}</text>')
-    out.append(f'<text x="{w - 20}" y="{h - 20}" font-size="12" text-anchor="end" fill="{t["muted"]}">★ {stars}</text>')
-    out.append("</svg>")
-    return "".join(out)
-
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--user", required=True)
-    ap.add_argument("--projects", default="assets/projects.json")
     ap.add_argument("--out", default="assets")
     args = ap.parse_args()
 
@@ -215,7 +176,6 @@ def main() -> None:
 
     followers = request(f"{API}/users/{args.user}", token)["followers"]
     repos = public_repos(args.user, token)
-    by_name = {r["name"]: r for r in repos}
     contrib = contributions(args.user, token)
 
     # Bytes por lenguaje en repos públicos propios (sin forks ni el repo del perfil)
@@ -226,13 +186,9 @@ def main() -> None:
         for lang, n in request(r["languages_url"], token).items():
             totals[lang] = totals.get(lang, 0) + n
 
-    projects = json.loads(Path(args.projects).read_text(encoding="utf-8"))["projects"]
     for theme in THEMES:
         (out / f"card-stats-{theme}.svg").write_text(stats_card(args.user, followers, repos, contrib, theme), encoding="utf-8")
         (out / f"card-langs-{theme}.svg").write_text(langs_card(totals, theme), encoding="utf-8")
-        for p in projects:
-            svg = project_card(p, by_name.get(p["repo"]), theme)
-            (out / f"card-{p['repo']}-{theme}.svg").write_text(svg, encoding="utf-8")
     print("tarjetas generadas en", out)
 
 

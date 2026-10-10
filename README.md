@@ -1,4 +1,3 @@
----
 <div align="center">
 
 <!-- BANNER - terminal profile.sh --live. Generado por scripts/banner.py -->
@@ -48,7 +47,7 @@ Soy egresado de **Desarrollo de Software** en el Instituto Tecnológico Superior
 
 <div align="center">
 
-## mi stack`
+## mi stack
 
 <img src="https://skillicons.dev/icons?i=cs,dotnet,python,django,angular,ts,react,nodejs,express,html,css,js,mysql,mongodb,git,github,vscode,ubuntu&perline=9" alt="tech stack">
 
@@ -91,37 +90,6 @@ Soy egresado de **Desarrollo de Software** en el Instituto Tecnológico Superior
 
 <div align="center">
 
-## proyectos
-
-<!-- Tarjetas generadas por scripts/cards.py a partir de assets/projects.json -->
-<a href="https://github.com/laor25/TareasAcademicas"><picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="assets/card-TareasAcademicas-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/card-TareasAcademicas-light.svg">
-  <img src="assets/card-TareasAcademicas-dark.svg" width="400" alt="TareasAcademicas">
-</picture></a>
-<a href="https://github.com/laor25/small_project"><picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="assets/card-small_project-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/card-small_project-light.svg">
-  <img src="assets/card-small_project-dark.svg" width="400" alt="small_project">
-</picture></a>
-<br>
-<a href="https://github.com/laor25/Portafolio"><picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="assets/card-Portafolio-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/card-Portafolio-light.svg">
-  <img src="assets/card-Portafolio-dark.svg" width="400" alt="Portafolio">
-</picture></a>
-<a href="https://github.com/laor25/ofim-ticas"><picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="assets/card-ofim-ticas-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/card-ofim-ticas-light.svg">
-  <img src="assets/card-ofim-ticas-dark.svg" width="400" alt="Mundo Mágico">
-</picture></a>
-
-</div>
-
----
-
-<div align="center">
-
 ## ¿los números importan? ohhh sí.
 
 <!-- Generadas por scripts/cards.py en este mismo repo, sin depender de
@@ -149,5 +117,3 @@ Soy egresado de **Desarrollo de Software** en el Instituto Tecnológico Superior
 <sub>` Hecho con dedicación · Luis Olvera · Guayaquil 🇪🇨 `</sub>
 
 </div>
-
----
