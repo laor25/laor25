@@ -55,7 +55,8 @@ THEMES = {
 
 # Zona del retrato dentro del banner
 PX, PY, PW, PH = 46, 108, 380, 440
-CELL = 4  # separación entre puntos
+CELL = 3  # separación entre puntos
+SCAN_START, SCAN_DUR = 0.3, 2.4  # el escaneo inicial "dibuja" el retrato
 
 
 def portrait_dots(theme: str) -> list[tuple[float, float, float]]:
@@ -64,33 +65,45 @@ def portrait_dots(theme: str) -> list[tuple[float, float, float]]:
     src = Image.open(SOURCE).convert("RGB")
     # Recorta las franjas negras laterales y encuadra cabeza + hombros
     src = src.crop((132, 0, 618, 560))
-    src = src.resize((cols, rows), Image.Resampling.LANCZOS)
+    # Se trabaja a 4x de resolución y luego se promedia por celda: más detalle
+    big = src.resize((cols * 4, rows * 4), Image.Resampling.LANCZOS)
 
-    rgb = np.asarray(src, dtype=np.float32)
+    rgb = np.asarray(big, dtype=np.float32)
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     # Fondo celeste: azul y verde altos, rojo bajo
     background = (b - r > 55) & (g - r > 35)
-    mask = Image.fromarray(np.uint8(~background) * 255, "L").filter(ImageFilter.MedianFilter(3))
+    mask = (
+        Image.fromarray(np.uint8(~background) * 255, "L")
+        .filter(ImageFilter.MedianFilter(5))
+        .filter(ImageFilter.GaussianBlur(2))
+        .resize((cols, rows), Image.Resampling.BOX)
+    )
     mask = np.asarray(mask, dtype=np.float32) / 255.0
 
-    gray = ImageOps.autocontrast(ImageOps.grayscale(src), cutoff=1)
-    lum = np.asarray(gray, dtype=np.float32) / 255.0
+    # Contraste local (imagen menos su desenfoque) para resaltar ojos, lentes y boca
+    gray = ImageOps.grayscale(big)
+    g_ = np.asarray(gray, dtype=np.float32)
+    blur = np.asarray(gray.filter(ImageFilter.GaussianBlur(24)), dtype=np.float32)
+    mix = 0.55 * g_ + 0.45 * np.clip(128 + (g_ - blur) * 1.6, 0, 255)
+    small = Image.fromarray(np.uint8(np.clip(mix, 0, 255))).resize((cols, rows), Image.Resampling.BOX)
+    small = ImageOps.autocontrast(small, cutoff=1, mask=Image.fromarray(np.uint8(mask > 0.5) * 255))
+    lum = np.asarray(small, dtype=np.float32) / 255.0
 
     if theme == "dark":
-        # Puntos claros sobre fondo oscuro: lo brillante crece
-        tone = 0.06 + 0.94 * lum ** 1.9
+        # Puntos claros sobre fondo oscuro; un mínimo para que pelo y ropa se vean
+        tone = np.maximum(0.13, 0.03 + 0.97 * lum ** 2.2)
     else:
-        # Puntos oscuros sobre fondo claro: lo oscuro crece
-        tone = 0.16 + 0.84 * (1.0 - lum) ** 1.05
+        # Puntos oscuros sobre fondo claro
+        tone = 0.10 + 0.90 * (1.0 - lum) ** 1.1
     tone = np.clip(tone, 0, 1) * mask
 
     dots = []
     for y in range(rows):
         for x in range(cols):
             v = float(tone[y, x])
-            if v < 0.05:
+            if v < 0.06:
                 continue
-            radius = 0.35 + 1.7 * v ** 0.5
+            radius = (0.2 + 1.3 * v) if theme == "dark" else (0.25 + 1.35 * v ** 0.5)
             dots.append((PX + x * CELL + CELL / 2, PY + y * CELL + CELL / 2, radius))
     return dots
 
@@ -115,7 +128,7 @@ def build(theme: str) -> str:
         f'<clipPath id="pc"><rect x="{PX}" y="{PY}" width="{PW}" height="{PH}" rx="8"/></clipPath>'
         f'<linearGradient id="scan" x1="0" y1="0" x2="0" y2="1">'
         f'<stop offset="0" stop-color="{t["key"]}" stop-opacity="0"/>'
-        f'<stop offset="1" stop-color="{t["key"]}" stop-opacity="0.16"/></linearGradient>'
+        f'<stop offset="1" stop-color="{t["key"]}" stop-opacity="0.28"/></linearGradient>'
         "</defs>"
     )
 
@@ -137,24 +150,43 @@ def build(theme: str) -> str:
     add(f'<text x="{PX}" y="{PY - 14}" font-size="12" fill="{t["muted"]}" letter-spacing="1.5">VISUAL.MAP</text>')
     add(f'<text x="{PX + PW}" y="{PY - 14}" text-anchor="end" font-size="12" fill="{t["ok"]}">● live</text>')
 
-    # Los puntos aparecen en oleadas aleatorias
-    waves = 12
-    groups: list[list[str]] = [[] for _ in range(waves)]
+    # Los puntos aparecen franja por franja, justo cuando pasa la línea de escaneo
+    band_h = CELL * 4
+    bands: dict[int, list[str]] = {}
     for x, y, rad in dots:
-        groups[int(rng.integers(0, waves))].append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{rad:.1f}"/>')
-    add(f'<g clip-path="url(#pc)" fill="{t["portrait"]}">')
-    for i, g in enumerate(groups):
-        begin = 0.25 + i * 0.13
-        add(
-            f'<g opacity="0"><animate attributeName="opacity" from="0" to="1" begin="{begin:.2f}s" '
-            f'dur="0.5s" fill="freeze"/>{"".join(g)}</g>'
+        bands.setdefault(int((y - PY) // band_h), []).append(
+            f'<circle cx="{x:g}" cy="{y:g}" r="{rad:.2f}"/>'
         )
-    # Línea de escaneo que recorre el retrato
+    add(f'<g clip-path="url(#pc)">')
+    add(f'<g fill="{t["portrait"]}">')
+    for i in sorted(bands):
+        begin = SCAN_START + SCAN_DUR * (i * band_h) / PH
+        add(
+            f'<g opacity="0"><animate attributeName="opacity" values="0;1" begin="{begin:.2f}s" '
+            f'dur="0.25s" fill="freeze"/>{"".join(bands[i])}</g>'
+        )
+    add("</g>")
+
+    # Líneas horizontales finas tipo monitor CRT
     add(
-        f'<rect x="{PX}" y="{PY - 60}" width="{PW}" height="60" fill="url(#scan)">'
-        f'<animate attributeName="y" values="{PY - 60};{PY + PH}" dur="4.5s" begin="1.8s" repeatCount="indefinite"/>'
-        "</rect>"
+        f'<pattern id="crt" width="4" height="4" patternUnits="userSpaceOnUse">'
+        f'<rect width="4" height="1" fill="{t["panel"]}" opacity="0.35"/></pattern>'
+        f'<rect x="{PX}" y="{PY}" width="{PW}" height="{PH}" fill="url(#crt)"/>'
     )
+
+    # Línea de escaneo: primero dibuja el retrato y luego sigue pasando suave
+    def scanline(begin: str, dur: float, opacity: float, repeat: str) -> str:
+        return (
+            f'<g opacity="{opacity}">'
+            f'<rect x="{PX}" y="-60" width="{PW}" height="60" fill="url(#scan)"/>'
+            f'<rect x="{PX}" y="-1.5" width="{PW}" height="2" fill="{t["key"]}"/>'
+            f'<animateTransform attributeName="transform" type="translate" values="0 {PY - 2};0 {PY + PH + 60}" '
+            f'begin="{begin}" dur="{dur}s" {repeat}/></g>'
+        )
+
+    add(f'<g>{scanline(f"{SCAN_START}s", SCAN_DUR, 1, "fill=" + chr(34) + "remove" + chr(34))}</g>')
+    loop_begin = SCAN_START + SCAN_DUR + 1.0
+    add(f'<g>{scanline(f"{loop_begin}s", 6, 0.45, "repeatCount=" + chr(34) + "indefinite" + chr(34))}</g>')
     add("</g>")
 
     # Terminal de datos
